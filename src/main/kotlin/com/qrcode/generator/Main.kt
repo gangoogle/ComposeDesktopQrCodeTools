@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,6 +49,33 @@ fun App() {
         }
     }
 
+    // QR码生成函数
+    fun generateQRCode() {
+        if (inputText.isNotBlank()) {
+            coroutineScope.launch {
+                isGenerating = true
+                errorMessage = null
+                try {
+                    val image = qrGenerator.generateQRCode(inputText.trim())
+                    qrCodeImage = image
+
+                    if (image != null) {
+                        // 添加到历史记录
+                        val historyItem = QRCodeHistoryItem.create(inputText.trim())
+                        history = historyManager.addHistoryItem(historyItem)
+                        selectedHistoryItem = historyItem
+                    } else {
+                        errorMessage = "QR码生成失败，请检查输入内容并重试"
+                    }
+                } catch (e: Exception) {
+                    errorMessage = "生成QR码时发生错误: ${e.message}"
+                } finally {
+                    isGenerating = false
+                }
+            }
+        }
+    }
+
     MaterialTheme {
         Row(
             modifier = Modifier
@@ -74,10 +102,22 @@ fun App() {
                     value = inputText,
                     onValueChange = { inputText = it },
                     label = { Text("输入文本内容") },
-                    placeholder = { Text("在此粘贴或输入要生成QR码的文本...") },
+                    placeholder = { Text("在此粘贴或输入要生成QR码的文本... (按回车键快速生成)") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(120.dp), textStyle = TextStyle(fontSize = 23.sp, fontWeight = FontWeight.Bold),
+                        .height(120.dp)
+                        .onKeyEvent { keyEvent ->
+                            if (keyEvent.key == Key.Enter && keyEvent.type == KeyEventType.KeyUp) {
+                                if (inputText.isNotBlank() && !isGenerating) {
+                                    generateQRCode()
+                                    inputText = inputText.dropLast(1)
+                                }
+                                true
+                            } else {
+                                false
+                            }
+                        },
+                    textStyle = TextStyle(fontSize = 23.sp, fontWeight = FontWeight.Bold),
                     maxLines = 5
                 )
 
@@ -85,33 +125,10 @@ fun App() {
 
                 // 生成按钮
                 Button(
-                    onClick = {
-                        if (inputText.isNotBlank()) {
-                            coroutineScope.launch {
-                                isGenerating = true
-                                errorMessage = null
-                                try {
-                                    val image = qrGenerator.generateQRCode(inputText.trim())
-                                    qrCodeImage = image
-
-                                    if (image != null) {
-                                        // 添加到历史记录
-                                        val historyItem = QRCodeHistoryItem.create(inputText.trim())
-                                        history = historyManager.addHistoryItem(historyItem)
-                                        selectedHistoryItem = historyItem
-                                    } else {
-                                        errorMessage = "QR码生成失败，请检查输入内容并重试"
-                                    }
-                                } catch (e: Exception) {
-                                    errorMessage = "生成QR码时发生错误: ${e.message}"
-                                } finally {
-                                    isGenerating = false
-                                }
-                            }
-                        }
-                    },
+                    onClick = { generateQRCode() },
                     enabled = inputText.isNotBlank() && !isGenerating,
-                    modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(backgroundColor = Color.Blue)
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.Blue)
                 ) {
                     if (isGenerating) {
                         CircularProgressIndicator(
