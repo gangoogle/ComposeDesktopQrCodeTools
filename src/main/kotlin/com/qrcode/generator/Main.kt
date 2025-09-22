@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -33,11 +34,11 @@ fun App() {
     var isGenerating by remember { mutableStateOf(false) }
     var selectedHistoryItem by remember { mutableStateOf<QRCodeHistoryItem?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    
+
     val qrGenerator = remember { QRCodeGenerator() }
     val historyManager = remember { HistoryManager() }
     val coroutineScope = rememberCoroutineScope()
-    
+
     // 启动时加载历史记录
     LaunchedEffect(Unit) {
         try {
@@ -46,7 +47,7 @@ fun App() {
             errorMessage = "加载历史记录失败: ${e.message}"
         }
     }
-    
+
     MaterialTheme {
         Row(
             modifier = Modifier
@@ -67,7 +68,7 @@ fun App() {
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
-                
+
                 // 输入框
                 OutlinedTextField(
                     value = inputText,
@@ -76,12 +77,12 @@ fun App() {
                     placeholder = { Text("在此粘贴或输入要生成QR码的文本...") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(120.dp),
+                        .height(120.dp), textStyle = TextStyle(fontSize = 23.sp, fontWeight = FontWeight.Bold),
                     maxLines = 5
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 // 生成按钮
                 Button(
                     onClick = {
@@ -92,7 +93,7 @@ fun App() {
                                 try {
                                     val image = qrGenerator.generateQRCode(inputText.trim())
                                     qrCodeImage = image
-                                    
+
                                     if (image != null) {
                                         // 添加到历史记录
                                         val historyItem = QRCodeHistoryItem.create(inputText.trim())
@@ -110,7 +111,7 @@ fun App() {
                         }
                     },
                     enabled = inputText.isNotBlank() && !isGenerating,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(backgroundColor = Color.Blue)
                 ) {
                     if (isGenerating) {
                         CircularProgressIndicator(
@@ -118,16 +119,16 @@ fun App() {
                             color = Color.White
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("生成中...")
+                        Text("生成中...", color = Color.White)
                     } else {
-                        Icon(Icons.Default.Create, contentDescription = null)
+                        Icon(Icons.Default.Create, contentDescription = null, tint = Color.White)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("生成QR码")
+                        Text("生成QR码", color = Color.White)
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 // 错误消息显示
                 errorMessage?.let { message ->
                     Card(
@@ -167,7 +168,7 @@ fun App() {
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                 }
-                
+
                 // QR码显示区域
                 Card(
                     modifier = Modifier
@@ -207,7 +208,7 @@ fun App() {
                     }
                 }
             }
-            
+
             // 右侧：历史记录
             Column(
                 modifier = Modifier
@@ -224,7 +225,7 @@ fun App() {
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
-                    
+
                     IconButton(
                         onClick = {
                             coroutineScope.launch {
@@ -242,9 +243,9 @@ fun App() {
                         )
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
                 // 历史记录列表
                 Card(
                     modifier = Modifier
@@ -286,7 +287,7 @@ fun App() {
                                         inputText = item.content
                                         selectedHistoryItem = item
                                         errorMessage = null
-                                        
+
                                         // 重新生成QR码
                                         coroutineScope.launch {
                                             isGenerating = true
@@ -312,7 +313,7 @@ fun App() {
                                                     qrCodeImage = null
                                                     inputText = ""
                                                 }
-                                                
+
                                                 // 删除历史记录项目
                                                 history = historyManager.removeHistoryItem(item.id)
                                             } catch (e: Exception) {
@@ -337,11 +338,10 @@ fun HistoryItemCard(
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = if (isSelected) 4.dp else 1.dp,
-        backgroundColor = if (isSelected) MaterialTheme.colors.primary.copy(alpha = 0.1f) else Color.White,
-        border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colors.primary) else null
+    Column(
+        modifier = Modifier.fillMaxWidth().border(
+            if (isSelected) BorderStroke(2.dp, MaterialTheme.colors.primary) else BorderStroke(0.dp, Color.Transparent)
+        ),
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -358,28 +358,27 @@ fun HistoryItemCard(
                     text = item.content,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                    fontSize = 18.sp,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = item.displayTime,
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
+
             }
-            
+
             // 右侧删除按钮
             IconButton(
                 onClick = onDelete,
                 modifier = Modifier.size(32.dp)
             ) {
                 Icon(
-                    Icons.Default.Delete,
+                    Icons.Default.Close,
                     contentDescription = "删除此记录",
-                    tint = Color.Red.copy(alpha = 0.7f),
+                    tint = Color.Black.copy(alpha = 0.7f),
                     modifier = Modifier.size(18.dp)
                 )
             }
+        }
+        Column(modifier = Modifier.fillMaxWidth(1f).height(1.dp).background(Color.LightGray)) {
+
         }
     }
 }
@@ -393,9 +392,9 @@ fun main() = application {
         e.printStackTrace()
         // 不要因为字符集问题而阻止应用启动，但要记录错误
     }
-    
+
     val windowState = rememberWindowState(width = 1200.dp, height = 800.dp)
-    
+
     Window(
         onCloseRequest = ::exitApplication,
         title = "QR码生成器",
