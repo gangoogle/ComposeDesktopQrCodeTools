@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -34,6 +35,7 @@ fun App() {
     var isGenerating by remember { mutableStateOf(false) }
     var selectedHistoryItem by remember { mutableStateOf<QRCodeHistoryItem?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isDarkMode by remember { mutableStateOf(true) }
 
     val qrGenerator = remember { QRCodeGenerator() }
     val historyManager = remember { HistoryManager() }
@@ -48,280 +50,321 @@ fun App() {
         }
     }
 
-    MaterialTheme {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-        ) {
-            // 左侧：输入和QR码显示区域
-            Column(
+    // QR码生成函数
+    fun generateQRCode() {
+        if (inputText.isNotBlank()) {
+            coroutineScope.launch {
+                isGenerating = true
+                errorMessage = null
+                try {
+                    val image = qrGenerator.generateQRCode(inputText.trim())
+                    qrCodeImage = image
+
+                    if (image != null) {
+                        // 添加到历史记录
+                        val historyItem = QRCodeHistoryItem.create(inputText.trim())
+                        history = historyManager.addHistoryItem(historyItem)
+                        selectedHistoryItem = historyItem
+                    } else {
+                        errorMessage = "QR码生成失败，请检查输入内容并重试"
+                    }
+                } catch (e: Exception) {
+                    errorMessage = "生成QR码时发生错误: ${e.message}"
+                } finally {
+                    isGenerating = false
+                }
+            }
+        }
+    }
+
+    MaterialTheme(
+        colors = if (isDarkMode) darkColors() else lightColors()
+    ) {
+        Box(modifier = Modifier.background(Color(51, 51, 51))) {
+            Row(
                 modifier = Modifier
-                    .weight(2f)
-                    .fillMaxHeight()
-                    .padding(end = 16.dp)
+                    .fillMaxSize()
+                    .padding(16.dp)
             ) {
-                // 标题
-                Text(
-                    text = "QR码生成器",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-
-                // 输入框
-                OutlinedTextField(
-                    value = inputText,
-                    onValueChange = { inputText = it },
-                    label = { Text("输入文本内容") },
-                    placeholder = { Text("在此粘贴或输入要生成QR码的文本...") },
+                // 左侧：输入和QR码显示区域
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp), textStyle = TextStyle(fontSize = 23.sp, fontWeight = FontWeight.Bold),
-                    maxLines = 5
-                )
+                        .weight(2f)
+                        .fillMaxHeight()
+                        .padding(end = 16.dp)
+                ) {
+                    // 标题和主题切换按钮
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "QR码生成器",
+                            fontSize = 24.sp,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                        //                    IconButton(
+                        //                        onClick = { isDarkMode = !isDarkMode },
+                        //                        modifier = Modifier.size(40.dp)
+                        //                    ) {
+                        //                        Icon(
+                        //                            imageVector = if (isDarkMode) Icons.Default.Build else Icons.Default.Check,
+                        //                            contentDescription = if (isDarkMode) "切换到浅色模式" else "切换到深色模式",
+                        //                            modifier = Modifier.size(24.dp),
+                        //                            tint = if (isDarkMode) Color.Yellow else MaterialTheme.colors.onSurface
+                        //                        )
+                        //                    }
+                    }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // 生成按钮
-                Button(
-                    onClick = {
-                        if (inputText.isNotBlank()) {
-                            coroutineScope.launch {
-                                isGenerating = true
-                                errorMessage = null
-                                try {
-                                    val image = qrGenerator.generateQRCode(inputText.trim())
-                                    qrCodeImage = image
-
-                                    if (image != null) {
-                                        // 添加到历史记录
-                                        val historyItem = QRCodeHistoryItem.create(inputText.trim())
-                                        history = historyManager.addHistoryItem(historyItem)
-                                        selectedHistoryItem = historyItem
-                                    } else {
-                                        errorMessage = "QR码生成失败，请检查输入内容并重试"
+                    // 输入框
+                    OutlinedTextField(
+                        value = inputText,
+                        onValueChange = { inputText = it },
+                        label = { Text("输入文本内容", color = Color.White) },
+                        placeholder = { Text("在此粘贴或输入要生成QR码的文本... (按回车键快速生成)", color = Color.White) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp)
+                            .onKeyEvent { keyEvent ->
+                                if (keyEvent.key == Key.Enter && keyEvent.type == KeyEventType.KeyUp) {
+                                    if (inputText.isNotBlank() && !isGenerating) {
+                                        generateQRCode()
+                                        inputText = inputText.dropLast(1)
                                     }
-                                } catch (e: Exception) {
-                                    errorMessage = "生成QR码时发生错误: ${e.message}"
-                                } finally {
-                                    isGenerating = false
+                                    true
+                                } else {
+                                    false
+                                }
+                            },
+                        textStyle = TextStyle(fontSize = 23.sp, fontWeight = FontWeight.Bold, color = Color.White),
+                        maxLines = 5
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 生成按钮
+                    Button(
+                        onClick = { generateQRCode() },
+                        enabled = inputText.isNotBlank() && !isGenerating,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (isGenerating) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = Color.White
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("生成中...", color = Color.White)
+                        } else {
+                            Icon(Icons.Default.Create, contentDescription = null, tint = Color.White)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("生成QR码", color = Color.White)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 错误消息显示
+                    errorMessage?.let { message ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            backgroundColor = Color.Red.copy(alpha = if (isDarkMode) 0.2f else 0.1f),
+                            border = BorderStroke(1.dp, Color.Red)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = Color.Red,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = message,
+                                    color = Color.Red,
+                                    fontSize = 14.sp
+                                )
+                                Spacer(modifier = Modifier.weight(1f))
+                                IconButton(
+                                    onClick = { errorMessage = null },
+                                    modifier = Modifier.size(20.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "关闭",
+                                        tint = Color.Red,
+                                        modifier = Modifier.size(16.dp)
+                                    )
                                 }
                             }
                         }
-                    },
-                    enabled = inputText.isNotBlank() && !isGenerating,
-                    modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(backgroundColor = Color.Blue)
-                ) {
-                    if (isGenerating) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            color = Color.White
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("生成中...", color = Color.White)
-                    } else {
-                        Icon(Icons.Default.Create, contentDescription = null, tint = Color.White)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("生成QR码", color = Color.White)
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
-                }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // 错误消息显示
-                errorMessage?.let { message ->
+                    // QR码显示区域
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = Color.Red.copy(alpha = 0.1f),
-                        border = BorderStroke(1.dp, Color.Red)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        elevation = 4.dp
                     ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Default.Warning,
-                                contentDescription = null,
-                                tint = Color.Red,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = message,
-                                color = Color.Red,
-                                fontSize = 14.sp
-                            )
-                            Spacer(modifier = Modifier.weight(1f))
-                            IconButton(
-                                onClick = { errorMessage = null },
-                                modifier = Modifier.size(20.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Close,
-                                    contentDescription = "关闭",
-                                    tint = Color.Red,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-
-                // QR码显示区域
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    elevation = 4.dp
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        qrCodeImage?.let { image ->
-                            Image(
-                                bitmap = image,
-                                contentDescription = "生成的QR码",
-                                modifier = Modifier
-                                    .size(300.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                            )
-                        } ?: run {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(
-                                    Icons.Default.Info,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(64.dp),
-                                    tint = Color.Gray
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    "QR码将在此显示",
-                                    color = Color.Gray
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 右侧：历史记录
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "历史记录",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    IconButton(
-                        onClick = {
-                            coroutineScope.launch {
-                                historyManager.clearHistory()
-                                history = emptyList()
-                                selectedHistoryItem = null
-                            }
-                        },
-                        enabled = history.isNotEmpty()
-                    ) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "清空历史",
-                            tint = if (history.isNotEmpty()) Color.Red else Color.Gray
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // 历史记录列表
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    elevation = 2.dp
-                ) {
-                    if (history.isEmpty()) {
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(
-                                    Icons.Default.List,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(48.dp),
-                                    tint = Color.Gray
+                            qrCodeImage?.let { image ->
+                                Image(
+                                    bitmap = image,
+                                    contentDescription = "生成的QR码",
+                                    modifier = Modifier
+                                        .size(300.dp)
+                                        .clip(RoundedCornerShape(8.dp))
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    "暂无历史记录",
-                                    color = Color.Gray
-                                )
+                            } ?: run {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(
+                                        Icons.Default.Info,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(64.dp),
+                                        tint = MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        "QR码将在此显示",
+                                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                                    )
+                                }
                             }
                         }
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize().padding(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                    }
+                }
+
+                // 右侧：历史记录
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "历史记录",
+                            fontSize = 18.sp,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        IconButton(
+                            onClick = {
+                                coroutineScope.launch {
+                                    historyManager.clearHistory()
+                                    history = emptyList()
+                                    selectedHistoryItem = null
+                                }
+                            },
+                            enabled = history.isNotEmpty()
                         ) {
-                            items(history) { item ->
-                                HistoryItemCard(
-                                    item = item,
-                                    isSelected = selectedHistoryItem?.id == item.id,
-                                    onClick = {
-                                        inputText = item.content
-                                        selectedHistoryItem = item
-                                        errorMessage = null
-
-                                        // 重新生成QR码
-                                        coroutineScope.launch {
-                                            isGenerating = true
-                                            try {
-                                                val image = qrGenerator.generateQRCode(item.content)
-                                                qrCodeImage = image
-                                                if (image == null) {
-                                                    errorMessage = "重新生成QR码失败"
-                                                }
-                                            } catch (e: Exception) {
-                                                errorMessage = "重新生成QR码时发生错误: ${e.message}"
-                                            } finally {
-                                                isGenerating = false
-                                            }
-                                        }
-                                    },
-                                    onDelete = {
-                                        coroutineScope.launch {
-                                            try {
-                                                // 如果删除的是当前选中的项目，清除选中状态
-                                                if (selectedHistoryItem?.id == item.id) {
-                                                    selectedHistoryItem = null
-                                                    qrCodeImage = null
-                                                    inputText = ""
-                                                }
-
-                                                // 删除历史记录项目
-                                                history = historyManager.removeHistoryItem(item.id)
-                                            } catch (e: Exception) {
-                                                errorMessage = "删除历史记录失败: ${e.message}"
-                                            }
-                                        }
-                                    }
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "清空历史",
+                                tint = if (history.isNotEmpty()) Color.Red else MaterialTheme.colors.onSurface.copy(
+                                    alpha = 0.4f
                                 )
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // 历史记录列表
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        elevation = 2.dp
+                    ) {
+                        if (history.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(
+                                        Icons.Default.List,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(48.dp),
+                                        tint = MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        "暂无历史记录",
+                                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                                    )
+                                }
+                            }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize().padding(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                items(history) { item ->
+                                    HistoryItemCard(
+                                        item = item,
+                                        isSelected = selectedHistoryItem?.id == item.id,
+                                        onClick = {
+                                            inputText = item.content
+                                            selectedHistoryItem = item
+                                            errorMessage = null
+
+                                            // 重新生成QR码
+                                            coroutineScope.launch {
+                                                isGenerating = true
+                                                try {
+                                                    val image = qrGenerator.generateQRCode(item.content)
+                                                    qrCodeImage = image
+                                                    if (image == null) {
+                                                        errorMessage = "重新生成QR码失败"
+                                                    }
+                                                } catch (e: Exception) {
+                                                    errorMessage = "重新生成QR码时发生错误: ${e.message}"
+                                                } finally {
+                                                    isGenerating = false
+                                                }
+                                            }
+                                        },
+                                        onDelete = {
+                                            coroutineScope.launch {
+                                                try {
+                                                    // 如果删除的是当前选中的项目，清除选中状态
+                                                    if (selectedHistoryItem?.id == item.id) {
+                                                        selectedHistoryItem = null
+                                                        qrCodeImage = null
+                                                        inputText = ""
+                                                    }
+
+                                                    // 删除历史记录项目
+                                                    history = historyManager.removeHistoryItem(item.id)
+                                                } catch (e: Exception) {
+                                                    errorMessage = "删除历史记录失败: ${e.message}"
+                                                }
+                                            }
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -372,12 +415,15 @@ fun HistoryItemCard(
                 Icon(
                     Icons.Default.Close,
                     contentDescription = "删除此记录",
-                    tint = Color.Black.copy(alpha = 0.7f),
+                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.7f),
                     modifier = Modifier.size(18.dp)
                 )
             }
         }
-        Column(modifier = Modifier.fillMaxWidth(1f).height(1.dp).background(Color.LightGray)) {
+        Column(
+            modifier = Modifier.fillMaxWidth(1f).height(1.dp)
+                .background(MaterialTheme.colors.onSurface.copy(alpha = 0.2f))
+        ) {
 
         }
     }
