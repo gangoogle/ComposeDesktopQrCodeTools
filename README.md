@@ -1,4 +1,4 @@
-<img width="2383" height="1558" alt="image" src="https://github.com/user-attachments/assets/fbd2da60-31ad-4723-82fb-2de487cb3ad3" />开发目的：
+开发目的：
 用于仓库条码系统快速生成二维码来测试
 # QR码生成器
 
