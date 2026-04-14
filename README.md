@@ -1,6 +1,8 @@
 # QR码生成器
 
 这是一个使用 Kotlin 和 Compose Desktop 构建的QR码生成器应用程序。
+<img width="2383" height="1558" alt="image" src="https://github.com/user-attachments/assets/fe58d801-65a5-44a9-a7a5-1b966f579291" />
+
 
 ## 功能特性
 
