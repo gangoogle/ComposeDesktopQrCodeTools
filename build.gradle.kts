@@ -79,6 +79,7 @@ compose.desktop {
                 // upgrade uuid for each new release
                 upgradeUuid = "BF9CDA6A-1391-46D5-9ED5-383D6E68CCEB"
                 console = false // 关闭控制台窗口，提供更好的用户体验
+                iconFile.set(file("src/main/resources/icons/logo.ico"))
             }
             
             linux {
