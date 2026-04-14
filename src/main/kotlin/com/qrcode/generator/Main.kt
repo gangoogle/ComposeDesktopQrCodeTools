@@ -21,6 +21,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.loadSvgPainter
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
@@ -441,10 +443,20 @@ fun main() = application {
 
     val windowState = rememberWindowState(width = 1200.dp, height = 800.dp)
 
+    val windowIcon = remember {
+        Thread.currentThread().contextClassLoader
+            .getResourceAsStream("logo.svg")
+            ?.use { stream ->
+                @Suppress("DEPRECATION")
+                loadSvgPainter(stream, Density(1f))
+            }
+    }
+
     Window(
         onCloseRequest = ::exitApplication,
         title = "QR码生成器",
-        state = windowState
+        state = windowState,
+        icon = windowIcon,
     ) {
         App()
     }
