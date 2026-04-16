@@ -83,7 +83,7 @@ compose.desktop {
             }
             
             linux {
-                iconFile.set(file("src/main/resources/icon.png"))
+                iconFile.set(file("src/main/resources/icons/qrcode_icon_256x256.png"))
             }
             
             macOS {
