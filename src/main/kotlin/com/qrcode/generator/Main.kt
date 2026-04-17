@@ -445,7 +445,7 @@ fun main() = application {
 
     val windowIcon = remember {
         Thread.currentThread().contextClassLoader
-            .getResourceAsStream("logo.svg")
+            .getResourceAsStream("applogo.svg")
             ?.use { stream ->
                 @Suppress("DEPRECATION")
                 loadSvgPainter(stream, Density(1f))
