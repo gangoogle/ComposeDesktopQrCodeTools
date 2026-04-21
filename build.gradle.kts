@@ -1,9 +1,9 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
-    kotlin("jvm") version "1.9.20"
-    id("org.jetbrains.compose") version "1.5.11"
-    kotlin("plugin.serialization") version "1.9.20"
+    kotlin("jvm") version "1.9.23"
+    id("org.jetbrains.compose") version "1.6.11"
+    kotlin("plugin.serialization") version "1.9.23"
 }
 
 group = "com.qrcode.generator"
