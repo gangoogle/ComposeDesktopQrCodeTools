@@ -71,7 +71,8 @@ compose.desktop {
                 "jdk.unsupported",
                 "jdk.charsets",
                 "java.naming",
-                "jdk.localedata"
+                "jdk.localedata",
+                "jdk.crypto.ec"
             )
             
             windows {
