@@ -1,6 +1,5 @@
 package com.qrcode.generator
 
-import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -111,7 +110,6 @@ private val LightPanelColor = Color(0xFFFDFEFF)
 private val LightPanelBorder = Color(0xFFD7E1F0)
 
 @Composable
-@Preview
 fun App() {
     var inputText by remember { mutableStateOf("") }
     var qrCodeImage by remember { mutableStateOf<ImageBitmap?>(null) }
